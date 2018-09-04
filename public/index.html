@@ -1,0 +1,365 @@
+<!--
+@license
+Copyright 2019, Google, Inc.
+Licensed under the Apache License, Version 2.0 (the 'License');
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an 'AS IS' BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>Smart home Stackdriver dashboard</title>
+    <meta name="description" content="public description">
+
+    <!-- See https://goo.gl/OOhYW5 -->
+    <link rel="manifest" href="/manifest.json">
+
+    <script type="module" src="./node_modules/@polymer/app-layout/app-toolbar/app-toolbar.js"></script>
+    <script type="module" src="./node_modules/@polymer/paper-card/paper-card.js"></script>
+    <script type="module" src="./node_modules/@polymer/iron-icons/iron-icons.js"></script>
+    <script type="module" src="./node_modules/@polymer/paper-dropdown-menu/paper-dropdown-menu.js"></script>
+    <script type="module" src="./node_modules/@polymer/paper-menu-button/paper-menu-button.js"></script>
+    <script type="module" src="./node_modules/@polymer/paper-listbox/paper-listbox.js"></script>
+    <script type="module" src="./node_modules/@polymer/paper-item/paper-item.js"></script>
+    <script type="module" src="./node_modules/@polymer/paper-item/paper-item-body.js"></script>
+    <script type="module" src="./node_modules/@polymer/paper-button/paper-button.js"></script>
+    <script type="module" src="./node_modules/@polymer/paper-toast/paper-toast.js"></script>
+    <script type="module" src="./node_modules/google-chart-polymer-3/google-chart.js"></script>
+
+    <script src="./node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+    <script src="./node_modules/web-animations-js/web-animations-next-lite.min.js"></script>
+
+    <!-- Load Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/5.9.4/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.9.4/firebase-firestore.js"></script>
+    <script src="./firebase-setup.js"></script>
+
+    <style>
+      body {
+        /* No margin on body so toolbar can span the screen */
+        margin: 0;
+        font-family: sans-serif;
+      }
+
+      app-toolbar {
+        /* Toolbar is the main header, so give it some color */
+        background-color: #1E88E5;
+        font-family: 'Roboto', Helvetica, sans-serif;
+        color: white;
+        --app-toolbar-font-size: 24px;
+      }
+
+      paper-button {
+        font-size: 10pt;
+        background-color: #4CAF50;
+        color: white;
+      }
+
+      paper-card {
+        width: 320px;
+        margin: 16px;
+        padding-bottom: 8px;
+        padding-left: 4px;
+        padding-right: 4px;
+        padding-top: 4px;
+      }
+
+      paper-card > iron-icon {
+        display: block;
+        width: 60px;
+        height: 60px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      paper-card > span {
+        margin-top: 8px;
+        text-align: center;
+        font-size: 22px;
+        display: block;
+        width: 100%;
+      }
+
+      paper-card > paper-dropdown-menu {
+        padding: 8px;
+        width: calc(100% - 16px);
+      }
+
+      paper-item[data-error] > paper-item-body {
+        /* Make it look like it is misspelled */
+        border-bottom: 1px dotted #ff0000;
+      }
+
+      #json-response, #error-output {
+        margin-left: 20px;
+        background-color: #efefef;
+        padding: 8px;
+        font-family: monospace;
+        white-space: pre;
+      }
+
+      google-chart {
+        height: 300px;
+        width: 50em;
+        display: inline-block;
+        border: solid 1px #555;
+        padding: 8px;
+        margin: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <app-toolbar>
+        <div main-title>Smart home errors</div>
+        <a href='https://developers.google.com/actions/smarthome/logging' target="_blank">
+          <paper-button raised>View Docs</paper-button>
+        </a>
+    </app-toolbar>
+
+    <paper-card>
+      <iron-icon icon="icons:lightbulb-outline"></iron-icon>
+      <span>Smart Light</span>
+
+      <paper-dropdown-menu label="Type" id="device-type">
+        <paper-listbox slot="dropdown-content" selected="0">
+          <paper-item>
+            action.devices.types.LIGHT
+          </paper-item>
+          <paper-item data-error="lart"><paper-item-body>
+            action.devices.types.LART
+          </paper-item-body></paper-item>
+          <paper-item data-error="lightbulb"><paper-item-body>
+            action.devices.types.LIGHTBULB
+          </paper-item-body></paper-item>
+        </paper-listbox>
+      </paper-dropdown-menu>
+
+      <paper-dropdown-menu label="Trait" id="device-trait">
+        <paper-listbox slot="dropdown-content" selected="0">
+          <paper-item>
+            action.devices.traits.OnOff
+          </paper-item>
+          <paper-item data-error="offon"><paper-item-body>
+            action.devices.traits.OffOn
+          </paper-item-body></paper-item>
+          <paper-item data-error="notraits"><paper-item-body>
+            No Traits
+          </paper-item-body></paper-item>
+        </paper-listbox>
+      </paper-dropdown-menu>
+
+      <paper-button id="btn-sync" raised>Sync</paper-button>
+    </paper-card>
+
+    <!-- Show our JSON response and associated messages -->
+    <table>
+      <tr>
+        <td id='json-response'></td>
+        <td id='error-output'></td>
+      </tr>
+    </table>
+
+    <google-chart
+      id='chart-time'
+      type='md-line'
+      options='{"title": "Number of Errors", "vAxis": {"minValue": 0}}'
+      data='[["Day", "Errors"],["0", "0"]]'>
+    </google-chart>
+
+    <google-chart
+      id='chart-pie-intent'
+      type='pie'
+      options='{"title": "Errors by Intent"}'
+      data='[["Intent", "Errors"], ["SYNC", 1], ["QUERY", 1], ["EXECUTE", 1]]'>
+    </google-chart>
+
+    <google-chart
+      id='chart-pie-type'
+      type='pie'
+      options='{"title": "Errors by error type"}'
+      data='[["Intent", "Errors"], ["INVALID_ARGUMENT", 1]]'>
+    </google-chart>
+
+    <google-chart
+      id='chart-pie-tertiary'
+      type='pie'
+      options='{"title": "Errors by error type"}'
+      data='[["Intent", "Errors"], ["No SupportedTraits for device", 1]]'>
+    </google-chart>
+
+    <paper-toast id='toast'></paper-toast>
+
+    <script>
+      const toast = document.getElementById('toast');
+      const jsonResponse = document.getElementById('json-response');
+      const errorOutput = document.getElementById('error-output');
+      const btnSync = document.getElementById('btn-sync');
+      const btnQuery = document.getElementById('btn-query');
+      const settingDeviceType = document.getElementById('device-type');
+      const settingDeviceTrait = document.getElementById('device-trait');
+      const settingDeviceOn = document.getElementById('device-is-on');
+
+      const sendErrors = (errorArray) => {
+        if (errorArray.length === 0) {
+          // We don't need to actually make an API call
+          errorOutput.innerText = '200 OK';
+          toast.text = 'Smart home event complete';
+          toast.open();
+          return;
+        }
+        const xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+          if (this.readyState == 4 && this.status == 200) {
+            errorOutput.innerText = this.responseText;
+            toast.text = 'Smart home event complete';
+            toast.open();
+          }
+        };
+        xhttp.open("GET", `/errors?error=${errorArray.join(',')}`, true);
+        xhttp.send();
+      }
+
+
+      btnSync.addEventListener('click', () => {
+        // Get a list of errors that may be setup
+        const errorArray = [];
+        const errorDeviceType = settingDeviceType.selectedItem.dataset.error;
+        const errorDeviceTrait = settingDeviceTrait.selectedItem.dataset.error;
+        if (errorDeviceType) {
+          errorArray.push(errorDeviceType);
+        }
+        if (errorDeviceTrait) {
+          errorArray.push(errorDeviceTrait);
+        }
+        sendErrors(errorArray);
+
+        // Show our JSON response -- highlight parts that may change
+        let syncJson = `{
+  requestId: "ff36a3cc-ec34-11e6-b1a0-64510650abcf",
+  payload: {
+    agentUserId: "1836.15267389",
+    devices: [{
+      id: "123",
+      type: <b>"${settingDeviceType.selectedItem.innerText.trim()}"</b>,
+      traits: [
+        <b>"${settingDeviceTrait.selectedItem.innerText.trim()}"</b>
+      ],
+      name: {
+        defaultNames: ["My Outlet 1234"],
+        name: "Night light",
+        nicknames: ["wall plug"]
+      },
+      deviceInfo: {
+        manufacturer: "lights-out-inc",
+        model: "hs1234",
+        hwVersion: "3.2",
+        swVersion: "11.4"
+      }
+    }]
+  }
+};`
+
+        if (errorDeviceTrait === "notraits") {
+          syncJson = syncJson.replace("\"No Traits\"", "");
+        }
+
+        jsonResponse.innerHTML = syncJson;
+      });
+    </script>
+
+    <!-- Populate our charts -->
+    <script type="module">
+      const db = firebase.firestore();
+      import {initGCharts} from "./node_modules/google-chart-polymer-3/google-chart.js"
+      initGCharts(() => {
+        const chart = document.getElementById('chart-time');
+        const intentPieChart = document.getElementById('chart-pie-intent');
+        const typePieChart = document.getElementById('chart-pie-type');
+        const tertiaryPieChart = document.getElementById('chart-pie-tertiary');
+
+        db.collection('errors')
+          .onSnapshot((snapshot) => {
+            const errorCount = {};
+            const errorsIntent = {};
+            const errorsType = {};
+            const errorsTertiary = {};
+
+            snapshot.forEach(doc => {
+              const {errorSecondary, errorTertiary, intent, timestamp} = doc.data();
+
+              // Collect a count of errors each day
+              const date = new Date(timestamp.seconds * 1000);
+              const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+              errorCount[dateStr] = errorCount[dateStr] + 1 || 1;
+
+              // Collect errors by intent
+              if (intent) {
+                errorsIntent[intent] = errorsIntent[intent] + 1 || 1;
+              }
+
+              if (errorSecondary) {
+                errorsType[errorSecondary] = errorsType[errorSecondary] + 1 || 1;
+              }
+
+              if (errorTertiary) {
+                errorsTertiary[errorTertiary] = errorsTertiary[errorTertiary] + 1 || 1;
+              }
+            });
+
+            let dataTable = [['Date', 'Error Count']];
+            let dataEntries = Object.entries(errorCount).sort();
+            for (let i = 0; i < dataEntries.length; i++) {
+              dataTable[i + 1] = dataEntries[i];
+            }
+
+            document.createElement('google-chart-loader').dataTable(dataTable)
+              .then((data) => {
+                chart.data = data;
+              });
+
+            dataTable = [['Intent', 'Errors']];
+            dataEntries = Object.entries(errorsIntent).sort();
+            for (let i = 0; i < dataEntries.length; i++) {
+              dataTable[i + 1] = dataEntries[i];
+            }
+
+            document.createElement('google-chart-loader').dataTable(dataTable)
+              .then((data) => {
+                intentPieChart.data = data;
+              });
+
+            dataTable = [['Error Type', 'Errors']];
+            dataEntries = Object.entries(errorsType).sort();
+            for (let i = 0; i < dataEntries.length; i++) {
+              dataTable[i + 1] = dataEntries[i];
+            }
+
+            document.createElement('google-chart-loader').dataTable(dataTable)
+              .then((data) => {
+                typePieChart.data = data;
+              });
+
+            dataTable = [['Error Type', 'Errors']];
+            dataEntries = Object.entries(errorsTertiary).sort();
+            for (let i = 0; i < dataEntries.length; i++) {
+              dataTable[i + 1] = dataEntries[i];
+            }
+
+            document.createElement('google-chart-loader').dataTable(dataTable)
+              .then((data) => {
+                tertiaryPieChart.data = data;
+              });
+          });
+        })
+    </script>
+  </body>
+</html>

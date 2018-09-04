@@ -1,0 +1,12 @@
+# Don't publish domain verification pages
+public/google*.html
+
+public/build/
+functions/firebase-debug.log
+**/package-lock.json
+**/node_modules/
+
+**/yarn-error.log
+firebase-setup.js
+.firebaserc
+.firebase/

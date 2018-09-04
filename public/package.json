@@ -1,0 +1,32 @@
+{
+  "name": "smart-home-stackdriver-frontend",
+  "description": "Error reporting dashboard for smart home",
+  "author": "Google Inc.",
+  "license": "Apache-2.0",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@polymer/app-layout": "^3.0.0-pre.21",
+    "@polymer/iron-icons": "^3.0.0-pre.21",
+    "@polymer/paper-button": "^3.0.0-pre.21",
+    "@polymer/paper-card": "^3.0.0-pre.21",
+    "@polymer/paper-dropdown-menu": "^3.0.0-pre.21",
+    "@polymer/paper-item": "^3.0.0-pre.21",
+    "@polymer/paper-listbox": "^3.0.0-pre.21",
+    "@polymer/paper-toast": "^3.0.0-pre.21",
+    "@polymer/polymer": "^3.0.0",
+    "google-chart-polymer-3": "^3.0.1",
+    "web-animations-js": "^2.3.1"
+  },
+  "devDependencies": {
+    "@webcomponents/webcomponentsjs": "^2.0.0",
+    "firebase-tools": "^6.6.0",
+    "polymer-cli": "^1.9.8",
+    "wct-browser-legacy": "^1.0.0"
+  },
+  "scripts": {
+    "build": "./node_modules/.bin/polymer build",
+    "firebase-setup": "./node_modules/.bin/firebase setup:web > ./firebase-setup.js",
+    "serve": "./node_modules/.bin/polymer serve"
+  }
+}

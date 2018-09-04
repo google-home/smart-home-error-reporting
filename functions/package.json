@@ -1,0 +1,21 @@
+{
+  "name": "smart-home-stackdriver",
+  "description": "Error reporting dashboard for smart home",
+  "private": true,
+  "author": "Google Inc.",
+  "license": "Apache-2.0",
+  "version": "1.0.0",
+  "engines": {
+    "node": "8"
+  },
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "cookie-parser": "^1.4.3",
+    "express": "x",
+    "express-session": "1.15.x",
+    "firebase-admin": "^6.0.0",
+    "firebase-functions": "^2.0.0",
+    "global": "^4.3.2",
+    "polymer-cli": "^1.8.0"
+  }
+}
