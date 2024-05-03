@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@webcomponents/webcomponentsjs": "^2.0.0",
-    "firebase-tools": "^6.6.0",
+    "firebase-tools": "^13.6.0",
     "polymer-cli": "^1.9.8",
     "wct-browser-legacy": "^1.0.0"
   },
